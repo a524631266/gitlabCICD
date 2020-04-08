@@ -1,0 +1,193 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: test-service
+  namespace: istio
+  labels:
+    app: test
+spec:
+  type: NodePort
+  selector:
+    app: test
+  ports:
+  - name: tcp
+    port: 8388
+    targetPort: 8388
+    nodePort: 31388
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-config
+  namespace: istio
+  labels:
+    k8s-app: test
+data:
+  application.yml: |-
+    #端口
+    hbase:
+      zookeeper:
+        quorum: 192.168.1.161
+        property:
+          clientPort: 2181
+    zookeeper:
+      znode:
+        parent: /hbase
+    url:
+      local: 127.0.0.1:8180
+      remote: 192.168.1.163
+    eureka:
+      resttemplate:
+        use: false
+      client:
+        serviceUrl: #注册中心的注册地址
+          defaultZone: http://admin:admin@${url.remote}:8761/eureka/
+          #defaultZone: http://admin:admin@127.0.0.1:8180/eureka/
+      instance:
+        status-page-url: http://${url.remote}:${server.port}/swagger-ui.html # ${server.port}为该服务的端口号
+        nonSecurePort: 31387
+    spring:
+    #  application:
+    #    name: -provider #服务名称--调用的时候根据名称来调用该服务的方法
+      profiles:
+        active: k8s
+    security:
+      basic:
+        enabled=false  # spring 2.0 失效
+    ---
+    #测试环境配置
+    spring:
+      profiles: k8s
+      application:
+        name: -provider
+    server:
+      port: 8387
+    analysiscasefeatureurl: http://service-service:8382/service/case/analysiscasefeature
+    #com:
+    #  hw:
+    #    cases:
+    #      controller:
+    #        analysiscaseurl: http://service-service:8382/service/case/analysis
+    com:
+      hw:
+        elec:
+          repo:
+            deeplearning_fualt_url: http://faultmodel-service:8888/v1/fault/analysis
+        cases:
+          controller:
+            analysiscaseurl: http://service-service:8382/service/case/analysis
+            analysiscasedetailurl: http://service-service:8382/service/case/analysisdetail
+---
+#---    
+#kind: Service
+#apiVersion: v1
+#metadata:
+#  name: -service-gateway
+#  namespace: istio
+#  labels:
+#    # app: 
+#    istio: customgateway
+#spec:
+#  type: LoadBalancer
+#  selector:
+#    istio: customgateway
+#  ports:
+#  - name: tcp
+#    port: 8387
+#    targetPort: 80
+#    nodePort: 31387
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: test-deployment
+  namespace: istio
+  labels:
+    app: test
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test
+      version: v1
+  minReadySeconds: 5
+  strategy:
+    type: RollingUpdate 
+    rollingUpdate:
+      maxSurge: 1 # 会先启动1个新的pod
+      maxUnavailable: 1 # 最多只有一个处于无法无法
+  template:
+    metadata:
+      labels:
+        app: test
+        version: v1
+    spec:
+        hostAliases:
+          - ip: "192.168.1.161"
+            hostnames:
+              - "hadoop011"
+          - ip: "192.168.1.163"
+            hostnames:
+              - "hadoop013"
+          - ip: "192.168.1.165"
+            hostnames:
+              - "hadoop015"
+          - ip: "192.168.1.167"
+            hostnames:
+              - "hadoop017"
+          - ip: "192.168.1.169"
+            hostnames:
+              - "hadoop019"
+          - ip: "192.168.1.171"
+            hostnames:
+              - "hadoop021"
+        containers:
+          - name: test
+            image: 192.168.1.163/ubuntutest:0.0.2
+            imagePullPolicy: IfNotPresent
+            #args: ["--spring.profiles.active=k8s" , "--server.servlet.session.timeout=1D"] # session保留1天
+            resources:
+              limits:
+                memory: 800Mi
+              requests:
+                memory: 500Mi
+            env:
+            - name: version
+              value: v1
+            volumeMounts:
+                - name: test-configmap
+                  mountPath: /application.yml
+                  readOnly: true
+                  subPath: application.yml
+        volumes:
+          - name: test-configmap
+            configMap:
+              defaultMode: 0600
+              name: test-config
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: test-service
+  namespace: istio
+spec:
+  host: test-service.istio.svc.cluster.local
+  subsets:
+  - name: test-v1
+    labels:
+      version: v1
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: test-service
+  namespace: istio
+spec:
+  hosts: 
+  - test-service.istio.svc.cluster.local
+  tcp:
+  - route:
+    - destination:
+        host: test-service.istio.svc.cluster.local
+        subset: test-v1

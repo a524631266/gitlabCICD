@@ -1,0 +1,9 @@
+/target/
+
+*/target/*
+#intelliJ IDEA 
+.idea/
+.settings
+.vscode
+.classpath
+.project

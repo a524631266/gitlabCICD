@@ -1,0 +1,19 @@
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: abcdsjfjeajslkdjflajsdflkajlsdfjasdf
+    server: https://xx.xx.xx.xx:port
+  name: kubernetes
+contexts:
+- context:
+    cluster: kubernetes
+    user: gitlab
+  name: gitlab@kubernetes
+current-context: gitlab@kubernetes
+kind: Config
+preferences: {}
+users:
+- name: gitlab
+  user:
+    client-certificate-data: abcdsjfjeajslkdjflajsdflkajlsdfjasdf
+    client-key-data: abcdsjfjeajslkdjflajsdflkajlsdfjasdf==

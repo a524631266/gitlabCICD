@@ -1,0 +1,50 @@
+stages:
+  - test
+  - build
+  - deploy
+
+# - test
+# - release
+# - deploy
+before_script:
+  - IMAGE_TAG=0.0.1
+  - IMAGE=192.168.1.163/ubuntutest:$IMAGE_TAG
+  - echo "build eap version:" $IMAGE_TAG
+
+# 测试阶段
+test_image:
+  stage: test
+  script:
+    - echo "开始测试"
+
+
+# 构建阶段
+build_image:
+  stage: build
+  #variables:
+  #  DOCKER_HOST: tcp://192.168.1.111:2375
+  image: 192.168.1.163/maven_for_docker:3.6.2
+  only:
+    - master
+  script:
+    - echo "build " $IMAGE
+    - mvn clean package -Dmaven.test.skip=true
+    - export #查看所有变量信息
+    - echo "start to build ${IMAGE}"
+    - docker build -t $IMAGE .
+    - docker push $IMAGE
+
+# mvn 与 docker构建操作放放在同一个容器中
+# apt-get update && apt-get install -y libltdl7
+
+# 在线部署阶段
+deploy_production:
+  stage: deploy
+  image: 192.168.1.163/imooc/kubectl:1.13.6.1 # 镜像名称
+  only:
+    - master
+  script:
+    - echo "deploy "$IMAGE
+    - echo "开始测试"
+    - kubectl set image -n namespacename deploy/test-deployment test=${IMAGE} --record
+    
