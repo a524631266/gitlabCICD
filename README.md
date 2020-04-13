@@ -123,6 +123,9 @@ dockerfile 请看 Dockerfile_maven
 ```
 sudo docker build --build-arg KUBE_LATEST_VERSION="v1.13.6" -t 192.168.1.163/imooc/kubectl:1.13.6.1 -f Dockerfile_maven.
 ```
-
+## 4.3创建一个R 语言 的编译执行环境可以执行Docker
+```
+sudo docker build -t 192.168.10.63/R:3.6.1 -f Dockerfile_R .
+```
 ## 5. 核心自动部署文件 .gitlab-ci.yml
 请查看当前文件目录中的.gitlab-ci.yml

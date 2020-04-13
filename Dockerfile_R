@@ -1,0 +1,5 @@
+FROM r-base:3.6.1
+MAINTAINER zhangll
+# 一个可以构建r包的执行环境
+RUN apt-get update && apt-get install -y libltdl7
+
